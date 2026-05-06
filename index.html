@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Silver Dead</title>
+<style>
+  html, body {
+    margin: 0;
+    overflow: hidden;
+    background: #050506;
+    color: #f2f2f2;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    user-select: none;
+  }
+  canvas { display: block; }
+
+  #start {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    z-index: 50;
+    background:
+      radial-gradient(circle at 50% 40%, rgba(128, 30, 20, .22), transparent 34%),
+      linear-gradient(180deg, rgba(5,5,8,.96), rgba(0,0,0,.99));
+  }
+  #startCard {
+    width: min(720px, calc(100vw - 36px));
+    padding: 34px;
+    border-radius: 26px;
+    border: 1px solid rgba(255, 210, 140, .18);
+    background: rgba(10, 10, 14, .84);
+    box-shadow: 0 24px 80px rgba(0,0,0,.65);
+    text-align: center;
+  }
+  #startCard h1 {
+    margin: 0 0 10px;
+    font-size: clamp(38px, 7vw, 72px);
+    line-height: .9;
+    letter-spacing: 4px;
+  }
+  #startCard p {
+    color: #a9a9ad;
+    line-height: 1.8;
+    margin: 12px 0 24px;
+  }
+  .settingsPanel {
+    margin: 20px auto 24px;
+    max-width: 520px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.24);
+  }
+  .settingRow {
+    display: grid;
+    grid-template-columns: 120px 1fr 80px;
+    gap: 14px;
+    align-items: center;
+    font-size: 13px;
+    color: #c9c3bc;
+  }
+  #sensitivitySlider {
+    width: 100%;
+    accent-color: #d8a35d;
+    cursor: pointer;
+  }
+  #sensitivityValue {
+    text-align: right;
+    color: #ffd166;
+    font-weight: 900;
+  }
+  .settingHint {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    color: #8f8f94;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  #startBtn {
+    cursor: pointer;
+    border: 1px solid rgba(255, 210, 140, .65);
+    color: white;
+    background: linear-gradient(180deg, rgba(124, 61, 32, .98), rgba(45, 22, 14, .98));
+    padding: 14px 38px;
+    border-radius: 999px;
+    font-weight: 900;
+    letter-spacing: 2px;
+  }
+
+  #ui {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #hud {
+    position: fixed;
+    left: 16px;
+    top: 14px;
+    width: 280px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(8, 8, 12, .74);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 14px 36px rgba(0,0,0,.45);
+  }
+  .hudTitle {
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 900;
+    color: #d8a35d;
+    margin-bottom: 8px;
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    line-height: 1.9;
+    font-size: 14px;
+  }
+  .label { color: #999aa3; }
+  .value { font-weight: 850; }
+
+  #centerMessage {
+    position: fixed;
+    left: 50%;
+    top: 22%;
+    transform: translateX(-50%);
+    min-width: 280px;
+    padding: 16px 22px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(8, 8, 12, .82);
+    text-align: center;
+    line-height: 1.7;
+    box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  }
+
+  #crosshair {
+    display: none;
+  }
+  #dot {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: #f4f4f4;
+    border: 1px solid rgba(0,0,0,.65);
+    box-shadow: 0 0 10px rgba(216, 163, 93, .65);
+  }
+
+  #hitMarker {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 42px;
+    height: 42px;
+    transform: translate(-50%, -50%) rotate(45deg);
+    opacity: 0;
+    transition: opacity .05s linear;
+  }
+  #hitMarker::before,
+  #hitMarker::after {
+    content: "";
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 0 16px rgba(255,255,255,.8);
+  }
+  #hitMarker::before {
+    left: 20px;
+    top: 0;
+    width: 2px;
+    height: 42px;
+  }
+  #hitMarker::after {
+    left: 0;
+    top: 20px;
+    width: 42px;
+    height: 2px;
+  }
+
+  #headshotText {
+    position: fixed;
+    left: 50%;
+    top: 42%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    font-size: 28px;
+    font-weight: 1000;
+    letter-spacing: 2px;
+    color: #ffd166;
+    text-shadow: 0 0 20px rgba(255, 209, 102, .6);
+    transition: opacity .08s linear;
+  }
+
+  #damageVignette {
+    position: fixed;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(255,0,0,0) 35%, rgba(150,0,0,.42) 100%);
+    transition: opacity .15s linear;
+  }
+
+  #controls {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.10);
+    background: rgba(8, 8, 12, .58);
+    color: rgba(255,255,255,.72);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+
+  #errorBox {
+    display: none;
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 58px;
+    z-index: 999;
+    background: rgba(90, 0, 0, .86);
+    color: white;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="start">
+  <div id="startCard">
+    <h1>SILVER<br>DEAD</h1>
+    <p>アンティークリボルバーで迫ってくるゾンビを撃退するFPSデモ。<br>
+    Headボーンに追従する透明判定でヘッドショットを判定。</p>
+
+    <div class="settingsPanel">
+      <div class="settingRow">
+        <b>CM / 360°</b>
+        <input id="sensitivitySlider" type="range" min="5" max="60" step="1" value="15">
+        <span id="sensitivityValue">15 cm</span>
+        <div class="settingHint">数値が小さいほど高感度。基本は15cm。例：10cmは速い、25cmはゆっくり。</div>
+      </div>
+    </div>
+
+    <button id="startBtn">CLICK TO START</button>
+  </div>
+</div>
+
+<div id="ui">
+  <div id="hud">
+    <div class="hudTitle">REVOLVER ZOMBIE SYSTEM</div>
+    <div class="row"><span class="label">HP</span><span id="hpText" class="value">100</span></div>
+    <div class="row"><span class="label">Score</span><span id="scoreText" class="value">0</span></div>
+    <div class="row"><span class="label">Ammo</span><span id="ammoText" class="value">6 / 6</span></div>
+    <div class="row"><span class="label">Zombies</span><span id="zombieText" class="value">0</span></div>
+    <div class="row"><span class="label">Headshots</span><span id="headshotCountText" class="value">0</span></div>
+  </div>
+  <div id="centerMessage">クリックでマウス固定</div>
+  <div id="crosshair"></div>
+  <div id="dot"></div>
+  <div id="hitMarker"></div>
+  <div id="headshotText">HEADSHOT</div>
+  <div id="damageVignette"></div>
+  <div id="controls">WASD: 移動 / Space: ジャンプ / Mouse: 視点 / Click: 射撃 / R: リロード / Shift: 走る</div>
+</div>
+<div id="errorBox"></div>
+
+<script>
+window.addEventListener("error", (e) => {
+  const box = document.getElementById("errorBox");
+  if (!box) return;
+  box.style.display = "block";
+  box.textContent = "JavaScript Error: " + (e.message || "unknown");
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const box = document.getElementById("errorBox");
+  if (!box) return;
+  box.style.display = "block";
+  box.textContent = "Promise Error: " + (e.reason?.message || e.reason || "unknown");
+});
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
+
+const ASSETS = {
+  revolver: "./assets/models/revolver_navy_colt_1851_silver.glb",
+  zombie: "./assets/models/zombie.glb",
+  village: "./assets/models/belarusian_village.glb",
+
+  idle: "./assets/animations/zombie_idle.fbx",
+  walk: "./assets/animations/walking.fbx",
+  run: "./assets/animations/zombie_running.fbx",
+  attack: "./assets/animations/zombie_attack.fbx",
+
+  bgm: "./assets/sounds/horror-ambience-512255.mp3"
+};
+
+const ui = {
+  start: document.getElementById("start"),
+  startBtn: document.getElementById("startBtn"),
+  sensitivitySlider: document.getElementById("sensitivitySlider"),
+  sensitivityValue: document.getElementById("sensitivityValue"),
+  centerMessage: document.getElementById("centerMessage"),
+  hpText: document.getElementById("hpText"),
+  scoreText: document.getElementById("scoreText"),
+  ammoText: document.getElementById("ammoText"),
+  zombieText: document.getElementById("zombieText"),
+  headshotCountText: document.getElementById("headshotCountText"),
+  hitMarker: document.getElementById("hitMarker"),
+  headshotText: document.getElementById("headshotText"),
+  damageVignette: document.getElementById("damageVignette")
+};
+
+// ---------- Audio ----------
+// 外部音声ファイルなしで鳴る簡易SE。ユーザー操作後にAudioContextを開始する。
+let audioCtx = null;
+const bgm = new Audio(ASSETS.bgm);
+bgm.loop = true;
+bgm.volume = 0.114;
+
+// 外部SE。以下のファイル名で sounds フォルダに置く。
+// assets/sounds/gunshot.mp3
+// assets/sounds/reload.mp3
+// assets/sounds/zombie_groan.mp3
+const soundFiles = {
+  gunshot: new Audio("./assets/sounds/gunshot.mp3"),
+  reload: new Audio("./assets/sounds/reload.mp3"),
+  zombieGroan: new Audio("./assets/sounds/zombie_groan.mp3")
+};
+soundFiles.gunshot.volume = 1.0;
+soundFiles.reload.volume = 0.85;
+soundFiles.zombieGroan.volume = 0.55;
+
+function playExternalSound(audio, volume = 1.0) {
+  if (!audio) return false;
+  try {
+    const s = audio.cloneNode(true);
+    s.volume = Math.max(0, Math.min(1, volume));
+    s.play().catch(() => {});
+    return true;
+  } catch (e) {
+    console.warn("external sound failed:", e);
+    return false;
+  }
+}
+
+function startBGM() {
+  bgm.currentTime = 0;
+  bgm.play().catch((e) => console.warn("BGM play failed:", e));
+}
+
+function stopBGM() {
+  bgm.pause();
+  bgm.currentTime = 0;
+}
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+}
+
+function playGunshot() {
+  // 外部mp3を再生。ファイルが読めない環境でも、下の生成音で必ず発砲感を出す。
+  playExternalSound(soundFiles.gunshot, 1.0);
+
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+
+  // 強めの発砲ノイズ。外部音が小さくても聞こえる保険。
+  const bufferSize = Math.floor(audioCtx.sampleRate * 0.18);
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    const t = i / bufferSize;
+    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 4.2);
+  }
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(780, now);
+  filter.Q.setValueAtTime(0.75, now);
+
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.90, now + 0.003);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(audioCtx.destination);
+  noise.start(now);
+  noise.stop(now + 0.18);
+
+  // 低音のパンチ
+  const osc = audioCtx.createOscillator();
+  const oscGain = audioCtx.createGain();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(120, now);
+  osc.frequency.exponentialRampToValueAtTime(52, now + 0.10);
+  oscGain.gain.setValueAtTime(0.42, now);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  osc.connect(oscGain);
+  oscGain.connect(audioCtx.destination);
+  osc.start(now);
+  osc.stop(now + 0.13);
+}
+
+function playReload() {
+  // 外部mp3を優先。鳴らなかったときだけ簡易生成音にフォールバック。
+  if (playExternalSound(soundFiles.reload, 0.75)) return;
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+
+  function click(t, freq, vol) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.06);
+  }
+
+  // シリンダーを開ける/弾を込める/閉じる感じ
+  click(now + 0.02, 520, 0.12);
+  click(now + 0.20, 360, 0.08);
+  click(now + 0.34, 390, 0.08);
+  click(now + 0.50, 420, 0.09);
+  click(now + 0.82, 260, 0.16);
+}
+
+function zombieVolumeByDistance(pos, maxVolume = 0.55) {
+  const d = pos ? pos.distanceTo(state.pos) : 8;
+
+  // 近距離では確実に聞こえるように、最小音量を高めにする。
+  // 0〜5m: ほぼ最大、5〜32m: なだらかに減衰。
+  if (d <= 5) return maxVolume;
+
+  const t = Math.max(0, Math.min(1, 1 - (d - 5) / 27));
+  return Math.max(0.08, maxVolume * (0.25 + 0.75 * t));
+}
+
+function playZombieGroan(posOrVolume = null, maxVolume = 0.55) {
+  if (typeof posOrVolume === "number") {
+    playExternalSound(soundFiles.zombieGroan, Math.min(posOrVolume, 0.55));
+    return;
+  }
+  const volume = zombieVolumeByDistance(posOrVolume, maxVolume);
+  playExternalSound(soundFiles.zombieGroan, volume);
+}
+
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070b17);
+scene.fog = new THREE.Fog(0x070b17, 32, 128);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 250);
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setPixelRatio(1);
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = false;
+document.body.appendChild(renderer.domElement);
+
+const clock = new THREE.Clock();
+const gltfLoader = new GLTFLoader();
+const fbxLoader = new FBXLoader();
+const raycaster = new THREE.Raycaster();
+const center = new THREE.Vector2(0, 0);
+
+const keys = {};
+const zombies = [];
+const bullets = [];
+const particles = [];
+const collidableMeshes = [];
+const collidableBoxes = [];
+const headColliders = [];
+
+const state = {
+  started: false,
+  gameOver: false,
+  yaw: 0,
+  pitch: 0,
+  dx: 0,
+  dy: 0,
+  pos: new THREE.Vector3(0, 1.65, 30),
+  velocity: new THREE.Vector3(),
+  verticalVelocity: 0,
+  grounded: true,
+  hp: 100,
+  score: 0,
+  headshots: 0,
+  ammo: 6,
+  maxAmmo: 6,
+  reloadTimer: 0,
+  shootCooldown: 0,
+  recoil: 0,
+  hitMarkerTimer: 0,
+  headshotTimer: 0,
+  damageTimer: 0,
+  spawnTimer: 0,
+  difficulty: 1,
+  cm360: 15,
+  countsPerCm: 800 / 2.54
+};
+
+let zombieTemplate = null;
+const animationClips = {};
+let assetsReady = false;
+
+// ---------- Scene ----------
+scene.add(new THREE.AmbientLight(0x8e95b3, 0.34));
+
+const moon = new THREE.DirectionalLight(0xc8d8ff, 1.05);
+moon.position.set(-18, 26, 14);
+scene.add(moon);
+
+const villageFill = new THREE.PointLight(0x6d87c7, 0.45, 85);
+villageFill.position.set(0, 12, 0);
+scene.add(villageFill);
+
+const warm = new THREE.PointLight(0xffa45c, 0.8, 20);
+warm.position.set(8, 5, -8);
+scene.add(warm);
+
+let villageRoot = null;
+
+function makeGroundTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#1d241a";
+  ctx.fillRect(0, 0, 256, 256);
+
+  for (let i = 0; i < 900; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? "rgba(50,70,40,.18)" : "rgba(25,35,22,.16)";
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 4, 2 + Math.random() * 4);
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(20, 20);
+  return tex;
+}
+
+const groundMat = new THREE.MeshStandardMaterial({
+  color: 0x232a1f,
+  roughness: 0.97,
+  metalness: 0.01,
+  map: makeGroundTexture()
+});
+
+const ground = new THREE.Mesh(new THREE.CircleGeometry(78, 80), groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+scene.add(ground);
+
+function createNightSky() {
+  const skyGeo = new THREE.SphereGeometry(180, 32, 24);
+  const skyMat = new THREE.MeshBasicMaterial({
+    color: 0x070b17,
+    side: THREE.BackSide
+  });
+  const sky = new THREE.Mesh(skyGeo, skyMat);
+  scene.add(sky);
+
+  const starCount = 1400;
+  const positions = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i++) {
+    const r = 150;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI * 0.48;
+    positions[i * 3 + 0] = Math.cos(theta) * Math.sin(phi) * r;
+    positions[i * 3 + 1] = Math.cos(phi) * r;
+    positions[i * 3 + 2] = Math.sin(theta) * Math.sin(phi) * r;
+  }
+  const starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const starMat = new THREE.PointsMaterial({
+    color: 0xdde6ff,
+    size: 0.65,
+    transparent: true,
+    opacity: 0.95,
+    sizeAttenuation: true
+  });
+  const stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
+
+  const moonMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(3.4, 24, 16),
+    new THREE.MeshBasicMaterial({ color: 0xe7ecff })
+  );
+  moonMesh.position.set(-34, 42, -52);
+  scene.add(moonMesh);
+
+  const moonGlow = new THREE.PointLight(0xaec4ff, 1.2, 120);
+  moonGlow.position.copy(moonMesh.position);
+  scene.add(moonGlow);
+}
+createNightSky();
+
+function createTree(x, z, scale = 1) {
+  const tree = new THREE.Group();
+
+  // 少し背の高い木にする
+  const actualScale = scale * 1.28;
+
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25 * actualScale, 0.34 * actualScale, 2.8 * actualScale, 8),
+    new THREE.MeshStandardMaterial({ color: 0x2b1d16, roughness: 0.98 })
+  );
+  trunk.position.y = 1.4 * actualScale;
+  tree.add(trunk);
+
+  const leavesMat = new THREE.MeshStandardMaterial({
+    color: 0x070b06,
+    roughness: 0.98,
+    metalness: 0.0
+  });
+
+  const l1 = new THREE.Mesh(new THREE.ConeGeometry(1.3 * actualScale, 2.8 * actualScale, 10), leavesMat);
+  l1.position.y = 3.0 * actualScale;
+  tree.add(l1);
+
+  const l2 = new THREE.Mesh(new THREE.ConeGeometry(1.0 * actualScale, 2.2 * actualScale, 10), leavesMat);
+  l2.position.y = 4.3 * actualScale;
+  tree.add(l2);
+
+  const l3 = new THREE.Mesh(new THREE.ConeGeometry(0.72 * actualScale, 1.8 * actualScale, 10), leavesMat);
+  l3.position.y = 5.4 * actualScale;
+  tree.add(l3);
+
+  tree.position.set(x, 0, z);
+  scene.add(tree);
+  collidableMeshes.push(tree);
+}
+
+function registerVillageCollisions(root) {
+  collidableBoxes.length = 0;
+  root.updateWorldMatrix(true, true);
+
+  root.traverse((child) => {
+    if (!child.isMesh) return;
+
+    const box = new THREE.Box3().setFromObject(child);
+    if (box.isEmpty()) return;
+
+    const size = new THREE.Vector3();
+    box.getSize(size);
+
+    // 地面・薄い板・極端に小さい飾りは判定から除外。
+    // 建物や塀っぽいものだけに当たり判定をつける。
+    const tooFlat = size.y < 0.35;
+    const tooSmall = size.x < 0.35 && size.z < 0.35;
+    const tooHugeFloor = size.x > 45 && size.z > 45 && size.y < 1.0;
+    const tooHugeObject = size.x > 26 || size.z > 26;
+
+    if (tooFlat || tooSmall || tooHugeFloor || tooHugeObject) return;
+
+    // 少し判定を縮めて、角や屋根の大きなBBoxに引っかかりすぎるのを防ぐ。
+    box.expandByScalar(-0.22);
+    if (!box.isEmpty()) {
+      collidableBoxes.push(box);
+    }
+  });
+
+  console.log("Village collision boxes:", collidableBoxes.length);
+}
+
+function isCircleOverlappingBoxXZ(pos, radius, box) {
+  const closestX = Math.max(box.min.x, Math.min(pos.x, box.max.x));
+  const closestZ = Math.max(box.min.z, Math.min(pos.z, box.max.z));
+  const dx = pos.x - closestX;
+  const dz = pos.z - closestZ;
+
+  // プレイヤーの身長範囲と建物の高さが全く重ならない場合は無視
+  const playerMinY = pos.y - 1.55;
+  const playerMaxY = pos.y + 0.2;
+  const yOverlap = playerMaxY > box.min.y && playerMinY < box.max.y;
+  if (!yOverlap) return false;
+
+  return (dx * dx + dz * dz) < radius * radius;
+}
+
+function hitsVillageCollision(pos, radius = 0.48) {
+  for (const box of collidableBoxes) {
+    if (isCircleOverlappingBoxXZ(pos, radius, box)) return true;
+  }
+  return false;
+}
+
+
+function createForestBoundary() {
+  const minX = -58, maxX = 58, minZ = -48, maxZ = 54;
+
+  // 高密度の外周林。少しランダムにずらして自然に見せる。
+  for (let x = minX; x <= maxX; x += 2.6) {
+    createTree(x + (Math.random() - 0.5) * 0.8, minZ + (Math.random() - 0.5) * 1.0, 0.9 + Math.random() * 0.45);
+    createTree(x + (Math.random() - 0.5) * 0.8, maxZ + (Math.random() - 0.5) * 1.0, 0.9 + Math.random() * 0.45);
+  }
+  for (let z = minZ + 2.6; z <= maxZ - 2.6; z += 2.6) {
+    createTree(minX + (Math.random() - 0.5) * 1.0, z + (Math.random() - 0.5) * 0.8, 0.9 + Math.random() * 0.45);
+    createTree(maxX + (Math.random() - 0.5) * 1.0, z + (Math.random() - 0.5) * 0.8, 0.9 + Math.random() * 0.45);
+  }
+
+  // 二列目も少し内側に作って、森の壁っぽくする
+  for (let x = minX + 3; x <= maxX - 3; x += 3.4) {
+    createTree(x + (Math.random() - 0.5) * 1.0, minZ + 4 + Math.random() * 1.4, 0.75 + Math.random() * 0.35);
+    createTree(x + (Math.random() - 0.5) * 1.0, maxZ - 4 - Math.random() * 1.4, 0.75 + Math.random() * 0.35);
+  }
+  for (let z = minZ + 4; z <= maxZ - 4; z += 3.4) {
+    createTree(minX + 4 + Math.random() * 1.4, z + (Math.random() - 0.5) * 1.0, 0.75 + Math.random() * 0.35);
+    createTree(maxX - 4 - Math.random() * 1.4, z + (Math.random() - 0.5) * 1.0, 0.75 + Math.random() * 0.35);
+  }
+}
+createForestBoundary();
+
+function fitVillage(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+
+  const maxXZ = Math.max(size.x, size.z) || 1;
+  const scale = 126 / maxXZ;
+  obj.scale.multiplyScalar(scale);
+
+  const box2 = new THREE.Box3().setFromObject(obj);
+  const center2 = new THREE.Vector3();
+  box2.getCenter(center2);
+  obj.position.x -= center2.x;
+  obj.position.z -= center2.z;
+  obj.position.y -= box2.min.y;
+}
+
+function loadVillage() {
+  gltfLoader.load(ASSETS.village, (gltf) => {
+    villageRoot = gltf.scene;
+    villageRoot.traverse((child) => {
+      if (child.isMesh) {
+        child.frustumCulled = false;
+        if (child.material) {
+          child.material.roughness = Math.min(1, (child.material.roughness ?? 0.75) + 0.08);
+          child.material.metalness = Math.min(0.08, child.material.metalness ?? 0.0);
+        }
+      }
+    });
+    fitVillage(villageRoot);
+    villageRoot.position.y = 0.02;
+    scene.add(villageRoot);
+    registerVillageCollisions(villageRoot);
+  }, undefined, (err) => {
+    console.warn("Village GLB load failed:", err);
+  });
+}
+loadVillage();
+// ---------- Gun ----------
+const gunGroup = new THREE.Group();
+camera.add(gunGroup);
+scene.add(camera);
+let gunModel = null;
+
+const muzzle = new THREE.Vector3(0.17, -0.21, -1.06);
+
+function fitRevolver(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const maxSize = Math.max(size.x, size.y, size.z) || 1;
+  obj.scale.setScalar(1.35 / maxSize);
+
+  box.setFromObject(obj);
+  const centerBox = new THREE.Vector3();
+  box.getCenter(centerBox);
+  obj.position.sub(centerBox);
+
+  // 前後反転済み。銃口が画面奥を向く想定。
+  obj.rotation.set(0, Math.PI * 1.52, 0);
+  obj.position.set(0.34, -0.46, -0.78);
+}
+
+function buildFallbackGun() {
+  const group = new THREE.Group();
+  const metal = new THREE.MeshStandardMaterial({ color: 0x34363a, roughness: .45, metalness: .75 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x3a2418, roughness: .72, metalness: .04 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(.28,.22,.55), metal);
+  group.add(body);
+
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,1.0,14), metal);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0,.05,-.68);
+  group.add(barrel);
+
+  const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(.14,.14,.22,24), metal);
+  cylinder.rotation.z = Math.PI / 2;
+  cylinder.position.set(0,.02,-.18);
+  group.add(cylinder);
+
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(.16,.45,.18), wood);
+  grip.position.set(0,-.33,.2);
+  grip.rotation.x = -.25;
+  group.add(grip);
+
+  group.position.set(.34,-.44,-.75);
+  return group;
+}
+
+function loadGun() {
+  gltfLoader.load(ASSETS.revolver, (gltf) => {
+    gunModel = gltf.scene;
+    gunModel.traverse((child) => {
+      if (child.isMesh) {
+        child.frustumCulled = false;
+        if (child.material) {
+          child.material.metalness = Math.min(1, child.material.metalness ?? .8);
+          child.material.roughness = Math.max(.25, child.material.roughness ?? .45);
+        }
+      }
+    });
+    fitRevolver(gunModel);
+    gunGroup.add(gunModel);
+  }, undefined, () => {
+    gunModel = buildFallbackGun();
+    gunGroup.add(gunModel);
+  });
+}
+
+const flashTexture = (() => {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(64, 64, 3, 64, 64, 64);
+  g.addColorStop(0, "rgba(255,245,180,1)");
+  g.addColorStop(.35, "rgba(255,175,55,.85)");
+  g.addColorStop(1, "rgba(255,70,20,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+})();
+
+const muzzleFlash = new THREE.Mesh(
+  new THREE.PlaneGeometry(.42,.42),
+  new THREE.MeshBasicMaterial({
+    map: flashTexture,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide
+  })
+);
+muzzleFlash.position.copy(muzzle);
+muzzleFlash.visible = false;
+gunGroup.add(muzzleFlash);
+
+const muzzleLight = new THREE.PointLight(0xffc77a, 0, 7);
+muzzleLight.position.copy(muzzle);
+gunGroup.add(muzzleLight);
+
+// ---------- Assets ----------
+function loadFBXClip(name, url) {
+  return new Promise((resolve) => {
+    fbxLoader.load(url, (fbx) => {
+      const clip = fbx.animations && fbx.animations[0];
+      if (clip) {
+        clip.name = name;
+        animationClips[name] = clip;
+      }
+      resolve();
+    }, undefined, (err) => {
+      console.warn("FBX load failed:", name, err);
+      resolve();
+    });
+  });
+}
+
+async function loadAssets() {
+  loadGun();
+
+  const zombiePromise = new Promise((resolve) => {
+    gltfLoader.load(ASSETS.zombie, (gltf) => {
+      zombieTemplate = gltf.scene;
+
+      // このGLBには巨大なPlaneが混ざっているので削除。
+      // これがゾンビが極端に小さく見える原因になっていた。
+      const removeList = [];
+      zombieTemplate.traverse((child) => {
+        const n = (child.name || "").toLowerCase();
+        if (child.isMesh && (n.includes("plane") || !child.isSkinnedMesh)) {
+          removeList.push(child);
+        }
+      });
+      for (const obj of removeList) {
+        if (obj.parent) obj.parent.remove(obj);
+      }
+
+      // GLB側のボーン名が mixamorig:Head_06 みたいに番号付きなので、
+      // FBXアニメーションの mixamorig:Head と合うように末尾番号を削る。
+      zombieTemplate.traverse((child) => {
+        if (child.name) {
+          child.name = child.name.replace(/_0?\d+$/g, "");
+        }
+      });
+
+      const zombieBodyMat = new THREE.MeshStandardMaterial({
+        color: 0x2b0f12,
+        emissive: 0x120204,
+        emissiveIntensity: 0.10,
+        roughness: 0.94,
+        metalness: 0.01
+      });
+
+      zombieTemplate.traverse((child) => {
+        if (child.isMesh) {
+          child.frustumCulled = false;
+          child.userData.zombieBody = true;
+          child.material = zombieBodyMat.clone();
+        }
+      });
+
+      if (gltf.animations && gltf.animations.length) {
+        animationClips.embedded = gltf.animations[0];
+      }
+      resolve();
+    }, undefined, (err) => {
+      console.warn("Zombie GLB load failed:", err);
+      resolve();
+    });
+  });
+
+  await Promise.all([
+    zombiePromise,
+    loadFBXClip("idle", ASSETS.idle),
+    loadFBXClip("walk", ASSETS.walk),
+    loadFBXClip("run", ASSETS.run),
+    loadFBXClip("attack", ASSETS.attack)
+  ]);
+
+  assetsReady = true;
+  ui.centerMessage.innerHTML = "読み込み完了<br>CLICK TO START";
+  console.log("Zombie template:", zombieTemplate, "Animation clips:", animationClips);
+}
+loadAssets();
+
+// ---------- Zombie ----------
+class Zombie {
+  constructor(position) {
+    this.root = new THREE.Group();
+    this.model = zombieTemplate ? SkeletonUtils.clone(zombieTemplate) : this.createFallbackZombie();
+    this.root.add(this.model);
+    this.root.position.copy(position);
+
+    this.hp = 100;
+    this.dead = false;
+    this.attackCooldown = 0;
+    this.state = "idle";
+    this.speed = (1.15 + Math.random() * .45) * 1.5;
+
+    this.mixer = new THREE.AnimationMixer(this.model);
+    this.actions = {};
+    this.currentAction = null;
+
+    for (const key of ["idle", "walk", "run", "attack"]) {
+      if (animationClips[key]) {
+        const clip = animationClips[key].clone();
+        // FBX側のトラック名も念のため正規化
+        clip.tracks.forEach((track) => {
+          track.name = track.name.replace(/_0?\d+(?=[\.\[])/g, "");
+        });
+
+        const action = this.mixer.clipAction(clip);
+        action.enabled = true;
+        action.setEffectiveWeight(1);
+        action.setEffectiveTimeScale(key === "attack" ? 1.05 : 1.0);
+        this.actions[key] = action;
+      }
+    }
+
+    // FBXアニメが名前不一致などで効かない時用。
+    // zombie.glbに元から入っているアニメーションがあれば保険として使う。
+    if (!this.actions.idle && animationClips.embedded) {
+      const action = this.mixer.clipAction(animationClips.embedded);
+      this.actions.idle = action;
+      this.actions.walk = action;
+      this.actions.run = action;
+    }
+
+    this.playAction(this.actions.idle ? "idle" : null);
+
+    this.bodyMeshes = [];
+    this.headBone = null;
+    this.model.traverse((child) => {
+      if (child.isMesh) {
+        child.userData.zombie = this;
+        child.userData.hitType = "body";
+        this.bodyMeshes.push(child);
+      }
+      const n = (child.name || "").toLowerCase();
+      if (!this.headBone && n.includes("head") && !n.includes("end")) {
+        this.headBone = child;
+      }
+    });
+
+    this.headCollider = new THREE.Mesh(
+      new THREE.SphereGeometry(.34, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.0, depthWrite: false })
+    );
+    this.headCollider.visible = false;
+    this.headCollider.userData.zombie = this;
+    this.headCollider.userData.hitType = "head";
+    scene.add(this.headCollider);
+    headColliders.push(this.headCollider);
+
+    // サイズ調整
+    this.fitZombie();
+
+    scene.add(this.root);
+  }
+
+  createFallbackZombie() {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x45533e, roughness: .85 });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.45, 1.3, 4, 10), mat);
+    body.position.y = 1.3;
+    g.add(body);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.32, 16, 10), mat);
+    head.position.y = 2.35;
+    head.name = "Head";
+    g.add(head);
+    return g;
+  }
+
+  fitZombie() {
+    // Planeなどを除外し、SkinnedMeshだけでサイズを測る
+    const box = new THREE.Box3();
+    let hasBodyMesh = false;
+
+    this.model.traverse((child) => {
+      if (child.isSkinnedMesh || child.userData.zombieBody) {
+        child.updateWorldMatrix(true, false);
+        const b = new THREE.Box3().setFromObject(child);
+        if (!b.isEmpty()) {
+          box.union(b);
+          hasBodyMesh = true;
+        }
+      }
+    });
+
+    if (!hasBodyMesh || box.isEmpty()) {
+      box.setFromObject(this.model);
+    }
+
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const height = size.y || 1;
+
+    // v7からさらに0.75倍に縮小
+    const scale = 1.065 / height;
+    this.model.scale.multiplyScalar(scale);
+
+    // 今回は「モデルだけを上げる」方式ではなく、
+    // root全体を浮かせる方式に変更する。
+    // Mixamo系のHips移動で膝が沈む場合、rootを持ち上げた方が安定する。
+    this.model.position.y = 0.05;
+    this.groundLift = 1.40;
+    this.root.position.y = this.groundLift;
+  }
+
+  fixGroundOffset() {
+    // root全体を常に一定高さに保つ。
+    // 膝がまだ沈む場合は this.groundLift を 0.85〜0.95 に上げる。
+    this.root.position.y = this.groundLift || 1.40;
+  }
+
+  playAction(name) {
+    if (!name || !this.actions[name] || this.state === name) return;
+    const next = this.actions[name];
+    next.reset().play();
+    if (this.currentAction && this.currentAction !== next) {
+      this.currentAction.crossFadeTo(next, .22, false);
+    }
+    this.currentAction = next;
+    this.state = name;
+  }
+
+  updateHeadCollider() {
+    if (!this.headCollider) return;
+    if (this.headBone) {
+      this.headBone.getWorldPosition(this.headCollider.position);
+      this.headCollider.position.y += .03;
+    } else {
+      const box = new THREE.Box3().setFromObject(this.model);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      this.headCollider.position.set(center.x, box.max.y - .25, center.z);
+    }
+  }
+
+  update(dt) {
+    if (this.dead) return;
+
+    if (this.mixer) this.mixer.update(dt);
+
+    // FBXアニメーションのルート移動で床に埋まることがあるので毎フレーム補正
+    this.fixGroundOffset();
+
+    const toPlayer = state.pos.clone().sub(this.root.position);
+    toPlayer.y = 0;
+    const dist = toPlayer.length();
+
+    if (dist > .001) {
+      toPlayer.normalize();
+      const angle = Math.atan2(toPlayer.x, toPlayer.z);
+      this.root.rotation.y += (angle - this.root.rotation.y) * Math.min(1, dt * 7);
+    }
+
+    if (dist > 14) {
+      this.playAction("walk");
+      this.root.position.add(toPlayer.multiplyScalar(this.speed * .75 * dt));
+    } else if (dist > 2.2) {
+      this.playAction("run");
+      this.root.position.add(toPlayer.multiplyScalar(this.speed * 1.55 * dt));
+    } else {
+      this.playAction("attack");
+      this.attackCooldown -= dt;
+      if (this.attackCooldown <= 0) {
+        this.attackCooldown = 1.05;
+        playZombieGroan(this.root.position, 0.55);
+        damagePlayer(12);
+      }
+    }
+
+    // root全体を持ち上げる方式で沈み込みを防止
+    this.fixGroundOffset();
+
+    this.updateHeadCollider();
+  }
+
+  takeDamage(amount, isHeadshot) {
+    if (this.dead) return;
+    this.hp -= amount;
+    spawnBlood(this.headCollider.position.clone(), isHeadshot ? 18 : 8);
+
+    if (this.hp <= 0) {
+      this.die(isHeadshot);
+    }
+  }
+
+  die(isHeadshot) {
+    this.dead = true;
+    state.score += isHeadshot ? 300 : 120;
+    if (isHeadshot) state.headshots++;
+    showHitMarker();
+    if (isHeadshot) showHeadshot();
+
+    const i = zombies.indexOf(this);
+    if (i >= 0) zombies.splice(i, 1);
+
+    const h = headColliders.indexOf(this.headCollider);
+    if (h >= 0) headColliders.splice(h, 1);
+
+    scene.remove(this.headCollider);
+    this.headCollider.geometry.dispose();
+    this.headCollider.material.dispose();
+
+    // 倒れた感じにして少し残す
+    this.root.rotation.x = Math.PI / 2;
+    this.root.position.y = .18;
+    setTimeout(() => {
+      scene.remove(this.root);
+      this.root.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+      });
+    }, 2200);
+  }
+}
+
+function spawnZombie() {
+  if (!assetsReady || !zombieTemplate) return;
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 28 + Math.random() * 22;
+  const pos = new THREE.Vector3(
+    Math.sin(angle) * radius,
+    0,
+    Math.cos(angle) * radius
+  );
+  pos.x = Math.max(-50, Math.min(50, pos.x));
+  pos.z = Math.max(-40, Math.min(46, pos.z));
+  const z = new Zombie(pos);
+  zombies.push(z);
+  if (Math.random() < 0.35) playZombieGroan(pos, 0.42);
+}
+
+function updateZombies(dt) {
+  state.spawnTimer -= dt;
+  if (state.spawnTimer <= 0 && zombies.length < 6) {
+    spawnZombie();
+    state.spawnTimer = Math.max(.85, 2.2 - state.difficulty * .12);
+    state.difficulty += .05;
+  }
+
+  for (const z of zombies) z.update(dt);
+}
+
+// ---------- Shooting ----------
+function shoot() {
+  if (!state.started || state.gameOver) return;
+  if (state.shootCooldown > 0 || state.reloadTimer > 0) return;
+
+  if (state.ammo <= 0) {
+    reload();
+    return;
+  }
+
+  state.ammo--;
+  state.shootCooldown = .34;
+  state.recoil += .009;
+  playGunshot();
+
+  gunGroup.position.z += .012;
+  gunGroup.rotation.x += .009;
+
+  muzzleFlash.visible = true;
+  muzzleFlash.scale.setScalar(.85 + Math.random() * .45);
+  muzzleFlash.rotation.z = Math.random() * Math.PI * 2;
+  muzzleLight.intensity = 3.1;
+  setTimeout(() => {
+    muzzleFlash.visible = false;
+    muzzleLight.intensity = 0;
+  }, 50);
+
+  raycaster.setFromCamera(center, camera);
+
+  // Headshot優先。頭判定に先に当たったら即ヘッドショット。
+  const headHits = raycaster.intersectObjects(headColliders, false);
+  if (headHits.length) {
+    const zombie = headHits[0].object.userData.zombie;
+    if (zombie) {
+      zombie.takeDamage(100, true);
+      updateUI();
+      return;
+    }
+  }
+
+  const bodyObjects = [];
+  for (const z of zombies) bodyObjects.push(...z.bodyMeshes);
+  const bodyHits = raycaster.intersectObjects(bodyObjects, true);
+  if (bodyHits.length) {
+    const target = findZombieFromObject(bodyHits[0].object);
+    if (target) {
+      target.takeDamage(40, false);
+      showHitMarker();
+      updateUI();
+      return;
+    }
+  }
+
+  createBulletLine();
+  updateUI();
+}
+
+function findZombieFromObject(obj) {
+  let o = obj;
+  while (o) {
+    if (o.userData && o.userData.zombie) return o.userData.zombie;
+    o = o.parent;
+  }
+  return null;
+}
+
+function reload() {
+  if (state.reloadTimer > 0 || state.ammo === state.maxAmmo) return;
+  state.reloadTimer = 3.0;
+  playReload();
+  ui.centerMessage.innerHTML = "RELOADING...";
+  ui.centerMessage.style.display = "block";
+}
+
+function createBulletLine() {
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  const start = camera.position.clone().add(dir.clone().multiplyScalar(1.2));
+  const end = camera.position.clone().add(dir.clone().multiplyScalar(45));
+
+  const geo = new THREE.BufferGeometry().setFromPoints([start, end]);
+  const mat = new THREE.LineBasicMaterial({ color: 0xd8a35d, transparent: true, opacity: .6 });
+  const line = new THREE.Line(geo, mat);
+  line.userData.life = .06;
+  scene.add(line);
+  bullets.push(line);
+}
+
+function spawnBlood(pos, count) {
+  for (let i = 0; i < count; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      color: 0x8b1515,
+      transparent: true,
+      opacity: .9,
+      depthWrite: false
+    }));
+    sp.position.copy(pos);
+    sp.scale.setScalar(.12 + Math.random() * .22);
+    sp.userData.life = .35 + Math.random() * .25;
+    sp.userData.vel = new THREE.Vector3(
+      (Math.random() - .5) * 4.5,
+      Math.random() * 2.2,
+      (Math.random() - .5) * 4.5
+    );
+    scene.add(sp);
+    particles.push(sp);
+  }
+}
+
+function showHitMarker() {
+  state.hitMarkerTimer = .08;
+  ui.hitMarker.style.opacity = "1";
+}
+
+function showHeadshot() {
+  state.headshotTimer = .45;
+  ui.headshotText.style.opacity = "1";
+}
+
+function damagePlayer(amount) {
+  if (state.gameOver) return;
+  state.hp = Math.max(0, state.hp - amount);
+  state.damageTimer = .35;
+  ui.damageVignette.style.opacity = "1";
+
+  if (state.hp <= 0) {
+    returnToMenuAfterDeath();
+    return;
+  }
+  updateUI();
+}
+
+function returnToMenuAfterDeath() {
+  state.gameOver = true;
+  state.started = false;
+  stopBGM();
+  document.exitPointerLock?.();
+
+  while (zombies.length) {
+    const z = zombies.pop();
+    if (z.headCollider) {
+      scene.remove(z.headCollider);
+    }
+    if (z.root) {
+      scene.remove(z.root);
+    }
+  }
+  headColliders.length = 0;
+
+  ui.start.style.display = "grid";
+  ui.centerMessage.innerHTML = `GAME OVER<br>SCORE: ${state.score}`;
+  ui.centerMessage.style.display = "block";
+  ui.damageVignette.style.opacity = "0";
+
+  setTimeout(() => {
+    if (!state.started) {
+      ui.centerMessage.innerHTML = "CLICK TO START";
+    }
+  }, 900);
+  updateUI();
+}
+
+// ---------- Input ----------
+if (ui.sensitivitySlider) {
+  ui.sensitivitySlider.addEventListener("input", (e) => {
+    state.cm360 = Math.max(5, Math.min(60, Number(e.target.value) || 15));
+    if (ui.sensitivityValue) {
+      ui.sensitivityValue.textContent = Math.round(state.cm360) + " cm";
+    }
+  });
+}
+
+ui.startBtn.addEventListener("click", startGame);
+
+renderer.domElement.addEventListener("click", () => {
+  if (!state.started) return;
+  if (state.gameOver) {
+    return;
+  }
+  if (document.pointerLockElement !== renderer.domElement) {
+    renderer.domElement.requestPointerLock();
+    return;
+  }
+  shoot();
+});
+
+window.addEventListener("mousedown", (e) => {
+  if (e.button === 0 && document.pointerLockElement === renderer.domElement) shoot();
+});
+
+document.addEventListener("pointerlockchange", () => {
+  if (!state.started || state.gameOver) return;
+  if (document.pointerLockElement === renderer.domElement) {
+    ui.centerMessage.style.display = "none";
+  } else {
+    ui.centerMessage.innerHTML = "クリックでマウス固定";
+    ui.centerMessage.style.display = "block";
+  }
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (document.pointerLockElement === renderer.domElement) {
+    state.dx += e.movementX;
+    state.dy += e.movementY;
+  }
+});
+
+window.addEventListener("keydown", (e) => {
+  keys[e.key.toLowerCase()] = true;
+
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (state.started && !state.gameOver && state.grounded) {
+      state.verticalVelocity = 6.2;
+      state.grounded = false;
+    }
+  }
+
+  if (e.key.toLowerCase() === "r") reload();
+});
+
+window.addEventListener("keyup", (e) => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+window.addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- Game Loop ----------
+function startGame() {
+  initAudio();
+
+  if (!assetsReady) {
+    ui.centerMessage.innerHTML = "まだ読み込み中...";
+    ui.centerMessage.style.display = "block";
+    return;
+  }
+
+  startBGM();
+
+  state.started = true;
+  state.gameOver = false;
+  state.hp = 100;
+  state.score = 0;
+  state.headshots = 0;
+  state.ammo = state.maxAmmo;
+  state.reloadTimer = 0;
+  state.shootCooldown = 0;
+  state.spawnTimer = .2;
+  state.difficulty = 1;
+  state.pos.set(0, 1.65, 30);
+  state.velocity.set(0, 0, 0);
+  state.verticalVelocity = 0;
+  state.grounded = true;
+  state.yaw = 0;
+  state.pitch = 0;
+
+  ui.start.style.display = "none";
+  ui.centerMessage.innerHTML = "クリックでマウス固定";
+  ui.centerMessage.style.display = "block";
+  ui.damageVignette.style.opacity = "0";
+
+  while (zombies.length) {
+    const z = zombies.pop();
+    scene.remove(z.headCollider);
+    scene.remove(z.root);
+  }
+  headColliders.length = 0;
+
+  for (let i = 0; i < 2; i++) spawnZombie();
+  updateUI();
+  renderer.domElement.requestPointerLock();
+}
+
+function updateCamera(dt) {
+  // cm/360° 方式。ブラウザでは実DPIが取れないため、800DPI相当として近似。
+  const sensitivity = (Math.PI * 2) / (state.cm360 * state.countsPerCm);
+  state.yaw -= state.dx * sensitivity;
+  state.pitch -= state.dy * sensitivity;
+  state.dx = 0;
+  state.dy = 0;
+
+  state.pitch = Math.max(-Math.PI / 2 + .04, Math.min(Math.PI / 2 - .04, state.pitch));
+
+  if (state.recoil > 0) {
+    state.pitch += state.recoil * .55;
+    state.recoil *= Math.pow(.05, dt);
+  }
+
+  camera.rotation.order = "YXZ";
+  camera.rotation.y = state.yaw;
+  camera.rotation.x = state.pitch;
+}
+
+function updateMovement(dt) {
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+  forward.y = 0;
+  forward.normalize();
+
+  const right = new THREE.Vector3();
+  right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+  const dir = new THREE.Vector3();
+  if (keys["w"]) dir.add(forward);
+  if (keys["s"]) dir.sub(forward);
+  if (keys["d"]) dir.add(right);
+  if (keys["a"]) dir.sub(right);
+  if (dir.lengthSq() > 0) dir.normalize();
+
+  const speed = keys["shift"] ? 8.2 : 5.0;
+  const targetVelocity = dir.multiplyScalar(speed);
+  state.velocity.lerp(targetVelocity, Math.min(1, dt * 12));
+
+  // 村オブジェクトとの簡易当たり判定。
+  // XとZを分けて解決すると、壁沿いに滑るように動ける。
+  const move = state.velocity.clone().multiplyScalar(dt);
+  const radius = 0.48;
+
+  // もし現在位置がすでに判定内なら、そこから抜け出せるように一時的に衝突を無視する。
+  // 村GLBのBoundingBoxが大きすぎる場合、初期位置が中に入ってしまうことがあるため。
+  const currentlyColliding = hitsVillageCollision(state.pos, radius);
+
+  const tryX = state.pos.clone();
+  tryX.x += move.x;
+  if (currentlyColliding || !hitsVillageCollision(tryX, radius)) {
+    state.pos.x = tryX.x;
+  } else {
+    state.velocity.x = 0;
+  }
+
+  const tryZ = state.pos.clone();
+  tryZ.z += move.z;
+  if (currentlyColliding || !hitsVillageCollision(tryZ, radius)) {
+    state.pos.z = tryZ.z;
+  } else {
+    state.velocity.z = 0;
+  }
+
+  state.pos.x = Math.max(-54, Math.min(54, state.pos.x));
+  state.pos.z = Math.max(-44, Math.min(50, state.pos.z));
+
+  // Jump / gravity
+  state.verticalVelocity -= 16.5 * dt;
+  state.pos.y += state.verticalVelocity * dt;
+  if (state.pos.y <= 1.65) {
+    state.pos.y = 1.65;
+    state.verticalVelocity = 0;
+    state.grounded = true;
+  }
+
+  camera.position.copy(state.pos);
+}
+
+function updateGun(dt) {
+  const moving = state.velocity.length() > .4;
+  const t = performance.now() * .006;
+
+  const walkX = .006 * Math.sin(t * 1.7);
+  const walkY = moving ? .016 * Math.sin(t * 2.8) : .004 * Math.sin(t);
+
+  let reloadAmount = 0;
+  if (state.reloadTimer > 0) {
+    const progress = 1 - (state.reloadTimer / 3.0);
+    reloadAmount = Math.sin(Math.max(0, Math.min(1, progress)) * Math.PI);
+  }
+
+  const targetX = walkX + reloadAmount * .10;
+  const targetY = walkY - reloadAmount * .30;
+  const targetZ = reloadAmount * .10;
+
+  gunGroup.position.x += (targetX - gunGroup.position.x) * Math.min(1, dt * 9);
+  gunGroup.position.y += (targetY - gunGroup.position.y) * Math.min(1, dt * 9);
+  gunGroup.position.z += (targetZ - gunGroup.position.z) * Math.min(1, dt * 9);
+
+  const targetRotX = reloadAmount * -.28;
+  const targetRotY = reloadAmount * .16;
+  const targetRotZ = (moving ? Math.sin(t * 2.2) * .012 : Math.sin(t) * .004) + reloadAmount * -.22;
+
+  gunGroup.rotation.x += (targetRotX - gunGroup.rotation.x) * Math.min(1, dt * 10);
+  gunGroup.rotation.y += (targetRotY - gunGroup.rotation.y) * Math.min(1, dt * 10);
+  gunGroup.rotation.z += (targetRotZ - gunGroup.rotation.z) * Math.min(1, dt * 10);
+}
+
+function updateTimers(dt) {
+  if (state.shootCooldown > 0) state.shootCooldown -= dt;
+
+  if (state.reloadTimer > 0) {
+    state.reloadTimer -= dt;
+    if (state.reloadTimer <= 0) {
+      state.reloadTimer = 0;
+      state.ammo = state.maxAmmo;
+      ui.centerMessage.style.display = document.pointerLockElement === renderer.domElement ? "none" : "block";
+    }
+  }
+
+  if (state.hitMarkerTimer > 0) {
+    state.hitMarkerTimer -= dt;
+    if (state.hitMarkerTimer <= 0) ui.hitMarker.style.opacity = "0";
+  }
+
+  if (state.headshotTimer > 0) {
+    state.headshotTimer -= dt;
+    if (state.headshotTimer <= 0) ui.headshotText.style.opacity = "0";
+  }
+
+  if (state.damageTimer > 0) {
+    state.damageTimer -= dt;
+    if (state.damageTimer <= 0) ui.damageVignette.style.opacity = "0";
+  }
+}
+
+function updateEffects(dt) {
+  for (let i = bullets.length - 1; i >= 0; i--) {
+    const b = bullets[i];
+    b.userData.life -= dt;
+    b.material.opacity = Math.max(0, b.userData.life / .06) * .6;
+    if (b.userData.life <= 0) {
+      scene.remove(b);
+      b.geometry.dispose();
+      b.material.dispose();
+      bullets.splice(i, 1);
+    }
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.userData.life -= dt;
+    p.position.add(p.userData.vel.clone().multiplyScalar(dt));
+    p.userData.vel.y -= dt * 3.0;
+    p.material.opacity = Math.max(0, p.userData.life / .5);
+    p.scale.multiplyScalar(1 + dt * 1.2);
+    if (p.userData.life <= 0) {
+      scene.remove(p);
+      p.material.dispose();
+      particles.splice(i, 1);
+    }
+  }
+}
+
+function updateUI() {
+  ui.hpText.textContent = state.hp;
+  ui.scoreText.textContent = state.score;
+  ui.ammoText.textContent = `${state.ammo} / ${state.maxAmmo}`;
+  ui.zombieText.textContent = zombies.length;
+  ui.headshotCountText.textContent = state.headshots;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(.033, clock.getDelta());
+
+  if (state.started && !state.gameOver) {
+    updateCamera(dt);
+    updateMovement(dt);
+    updateGun(dt);
+    updateZombies(dt);
+    updateTimers(dt);
+    updateEffects(dt);
+    updateUI();
+  } else {
+    updateEffects(dt);
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
